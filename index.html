@@ -2,122 +2,154 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale: 1.0">
-    <title>Fatpetmon!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fatpetmon Game</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f4f4f9;
-            margin: 0;
-        }
-        .container {
-            width: 300px;
-            padding: 20px;
-            background-color: #ffffff;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             text-align: center;
+            background-color: #f0f0f0;
+            color: #333;
         }
-        h2 {
-            margin-bottom: 20px;
+        .fatpet {
+            width: 100px;
+            height: 100px;
+            background-color: lightblue;
+            border: 2px solid #333;
+            margin: 10px;
+            display: inline-block;
+            text-align: center;
+            vertical-align: top;
         }
-        .tab {
-            display: flex;
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
             cursor: pointer;
-            padding: 10px;
-            border-bottom: 2px solid transparent;
-        }
-        .tab.active {
-            border-bottom: 2px solid #4CAF50;
-            font-weight: bold;
-        }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
+            border-radius: 5px;
         }
-        button:hover {
-            background-color: #45a049;
+        #encounterArea, #inventoryArea {
+            margin-top: 20px;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="tab" id="signup-tab" onclick="toggleForm(false)">Sign Up</div>
-        <div class="tab" id="login-tab" onclick="toggleForm(true)">Login</div>
-        <h2 id="form-title">Sign Up</h2>
-        <input type="text" id="username" placeholder="Username" required>
-        <input type="password" id="password" placeholder="Password" required>
-        <button onclick="submitForm()">Submit</button>
-    </div>
+    <h1>Fatpetmon Game</h1>
+    <button class="btn" onclick="generateEncounter()">Find Wild Fatpet</button>
+    <div id="encounterArea"></div>
+    <h2>Your Fatpet Inventory</h2>
+    <div id="inventoryArea"></div>
 
     <script>
-        let isLogin = false;
+        let player = {
+            fatpetMon: [], // Array of captured Fatpet mon
+            activeFatpetMon: null, // Currently active Fatpet mon for battles
+            encounter: null // Current random encounter
+        };
 
-        function toggleForm(login) {
-            isLogin = login;
-            document.getElementById("form-title").innerText = isLogin ? "Login" : "Sign Up";
-            document.querySelector("button").innerText = isLogin ? "Login" : "Sign Up";
-
-            document.getElementById("signup-tab").classList.toggle("active", !isLogin);
-            document.getElementById("login-tab").classList.toggle("active", isLogin);
+        // Generate a random encounter with a wild Fatpet mon
+        function generateEncounter() {
+            let level = Math.floor(Math.random() * 10) + 1;
+            player.encounter = {
+                name: "Wild Fatpet" + (Math.floor(Math.random() * 100) + 1),
+                hp: level * 10,
+                attack: level * 2,
+                defense: level * 1.5,
+                level: level
+            };
+            displayEncounter();
         }
 
-        function submitForm() {
-            const username = document.getElementById("username").value;
-            const password = document.getElementById("password").value;
+        // Display encountered Fatpet mon
+        function displayEncounter() {
+            let encounterArea = document.getElementById("encounterArea");
+            encounterArea.innerHTML = `
+                <div class="fatpet">
+                    <p>${player.encounter.name}</p>
+                    <p>Level: ${player.encounter.level}</p>
+                    <p>HP: ${player.encounter.hp}</p>
+                </div>
+                <p>
+                    <button class="btn" onclick="attemptCapture()">Attempt Capture</button>
+                    <button class="btn" onclick="startBattle()">Battle</button>
+                </p>
+            `;
+        }
 
-            if (!username || !password) {
-                alert("fill in everything dum dum");
+        // Capture attempt with success based on level difference
+        function attemptCapture() {
+            let successRate = Math.random();
+            let captureThreshold = 0.5 + (player.activeFatpetMon ? 0.1 : 0); // Easier if the player has an active Fatpet mon
+            if (successRate < captureThreshold) {
+                alert("Capture successful!");
+                player.fatpetMon.push(player.encounter);
+                updateInventory();
+            } else {
+                alert("Capture failed. Try again!");
+            }
+            player.encounter = null;
+            document.getElementById("encounterArea").innerHTML = "";
+        }
+
+        // Start a battle between player's active Fatpet mon and the wild Fatpet mon
+        function startBattle() {
+            if (!player.activeFatpetMon) {
+                alert("Please select an active Fatpet mon from your inventory first!");
                 return;
             }
+            let playerAttack = player.activeFatpetMon.attack - player.encounter.defense;
+            let encounterAttack = player.encounter.attack - player.activeFatpetMon.defense;
+            player.encounter.hp -= playerAttack > 0 ? playerAttack : 1;
+            player.activeFatpetMon.hp -= encounterAttack > 0 ? encounterAttack : 1;
 
-            if (isLogin) {
-                // Login process
-                const encryptedPassword = localStorage.getItem(username);
-                if (encryptedPassword) {
-                    const decryptedPassword = CryptoJS.AES.decrypt(encryptedPassword, username).toString(CryptoJS.enc.Utf8);
-                    if (decryptedPassword === password) {
-                        alert("you logged in");
-                    } else {
-                        alert("you're cooked, the password is wrong.");
-                    }
-                } else {
-                    alert("hmmm, i didnt find this user???");
-                }
+            if (player.encounter.hp <= 0) {
+                alert("You won the battle!");
+                player.activeFatpetMon.xp = (player.activeFatpetMon.xp || 0) + 10;
+                checkLevelUp(player.activeFatpetMon);
+                updateInventory();
+            } else if (player.activeFatpetMon.hp <= 0) {
+                alert("Your Fatpet mon was defeated!");
+                player.activeFatpetMon.hp = 1; // Reset HP to avoid complete loss
             } else {
-                // Sign up process
-                if (localStorage.getItem(username)) {
-                    alert("someone already took this username, l bozo imagine");
-                } else {
-                    const encryptedPassword = CryptoJS.AES.encrypt(password, username).toString();
-                    localStorage.setItem(username, encryptedPassword);
-                    alert("Sign up successful! You can now log in.");
-                    toggleForm(true);
-                }
+                alert("Battle ongoing! Attack again!");
             }
+        }
 
-            document.getElementById("username").value = "";
-            document.getElementById("password").value = "";
+        // Check if the Fatpet mon levels up
+        function checkLevelUp(fatpet) {
+            let levelUpThreshold = fatpet.level * 20;
+            if (fatpet.xp >= levelUpThreshold) {
+                fatpet.level++;
+                fatpet.hp += 10;
+                fatpet.attack += 2;
+                fatpet.defense += 1.5;
+                fatpet.xp = 0;
+                alert(`${fatpet.name} leveled up! Now level ${fatpet.level}`);
+            }
+        }
+
+        // Update inventory display
+        function updateInventory() {
+            let inventoryArea = document.getElementById("inventoryArea");
+            inventoryArea.innerHTML = player.fatpetMon.map((fatpet, index) => `
+                <div class="fatpet" onclick="setActiveFatpet(${index})">
+                    <p>${fatpet.name}</p>
+                    <p>Level: ${fatpet.level}</p>
+                    <p>HP: ${fatpet.hp}</p>
+                    <p>Attack: ${fatpet.attack}</p>
+                    <p>Defense: ${fatpet.defense}</p>
+                </div>
+            `).join("");
+        }
+
+        // Set a Fatpet mon as active for battles
+        function setActiveFatpet(index) {
+            player.activeFatpetMon = player.fatpetMon[index];
+            alert(`${player.activeFatpetMon.name} is now active for battles!`);
         }
     </script>
 </body>
 </html>
+
