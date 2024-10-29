@@ -11,15 +11,30 @@
             background-color: #f0f0f0;
             color: #333;
         }
-        .fatpet {
-            width: 100px;
-            height: 100px;
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        #gameScreen {
+            width: 400px;
+            height: 400px;
+            border: 2px solid #333;
+            margin: 20px auto;
+            position: relative;
+            background-color: #b2d8d8;
+        }
+        .player, .encounterFatpet {
+            width: 40px;
+            height: 40px;
+            position: absolute;
+            text-align: center;
+            line-height: 40px;
             background-color: lightblue;
             border: 2px solid #333;
-            margin: 10px;
-            display: inline-block;
-            text-align: center;
-            vertical-align: top;
+        }
+        #player {
+            background-color: #4CAF50;
+            color: white;
         }
         .btn {
             padding: 10px 20px;
@@ -30,62 +45,116 @@
             border: none;
             border-radius: 5px;
         }
-        #encounterArea, #inventoryArea {
+        #inventoryArea {
             margin-top: 20px;
         }
     </style>
 </head>
 <body>
     <h1>Fatpetmon Game</h1>
-    <button class="btn" onclick="generateEncounter()">Find Wild Fatpet</button>
-    <div id="encounterArea"></div>
-    <h2>Your Fatpet Inventory</h2>
-    <div id="inventoryArea"></div>
+
+    <div class="container">
+        <div>
+            <button class="btn" onclick="login()">Login</button>
+            <button class="btn" onclick="register()">Register</button>
+            <button class="btn" onclick="logout()">Logout</button>
+        </div>
+        <div id="gameScreen">
+            <div id="player" class="player">👤</div>
+        </div>
+        <button class="btn" onclick="generateEncounter()">Walk Around</button>
+        <div id="encounterArea"></div>
+        <h2>Your Fatpet Inventory</h2>
+        <div id="inventoryArea"></div>
+    </div>
 
     <script>
-        let player = {
-            fatpetMon: [], // Array of captured Fatpet mon
-            activeFatpetMon: null, // Currently active Fatpet mon for battles
-            encounter: null // Current random encounter
-        };
+        let accounts = JSON.parse(localStorage.getItem("accounts") || "{}");
+        let currentUser = null;
+        let player = { fatpetMon: [], activeFatpetMon: null, encounter: null };
+        
+        function saveAccount() {
+            if (currentUser) {
+                accounts[currentUser] = player;
+                localStorage.setItem("accounts", JSON.stringify(accounts));
+            }
+        }
 
-        // Generate a random encounter with a wild Fatpet mon
+        function login() {
+            const username = prompt("Enter your username:");
+            if (accounts[username]) {
+                currentUser = username;
+                player = accounts[username];
+                alert("Login successful!");
+                updateInventory();
+            } else {
+                alert("No account found. Please register first.");
+            }
+        }
+
+        function register() {
+            const username = prompt("Choose a username:");
+            if (!accounts[username]) {
+                currentUser = username;
+                accounts[username] = { fatpetMon: [], activeFatpetMon: null };
+                localStorage.setItem("accounts", JSON.stringify(accounts));
+                alert("Account registered!");
+            } else {
+                alert("Username already exists.");
+            }
+        }
+
+        function logout() {
+            saveAccount();
+            currentUser = null;
+            player = { fatpetMon: [], activeFatpetMon: null };
+            alert("Logged out!");
+            updateInventory();
+        }
+
+        // Player movement and encounter area setup
+        const gameScreen = document.getElementById("gameScreen");
+        const playerElement = document.getElementById("player");
+        let posX = 180, posY = 180;
+        
+        function movePlayer(dx, dy) {
+            posX = Math.min(360, Math.max(0, posX + dx));
+            posY = Math.min(360, Math.max(0, posY + dy));
+            playerElement.style.left = posX + "px";
+            playerElement.style.top = posY + "px";
+            if (Math.random() < 0.2) { generateEncounter(); } // 20% chance to encounter
+        }
+
+        document.addEventListener("keydown", function(event) {
+            if (!currentUser) return alert("Please log in or register.");
+            if (event.key === "ArrowUp") movePlayer(0, -40);
+            if (event.key === "ArrowDown") movePlayer(0, 40);
+            if (event.key === "ArrowLeft") movePlayer(-40, 0);
+            if (event.key === "ArrowRight") movePlayer(40, 0);
+        });
+
+        // Generate and display random encounter
         function generateEncounter() {
             let level = Math.floor(Math.random() * 10) + 1;
-            player.encounter = {
-                name: "Wild Fatpet" + (Math.floor(Math.random() * 100) + 1),
-                hp: level * 10,
-                attack: level * 2,
-                defense: level * 1.5,
-                level: level
-            };
+            player.encounter = { name: "Wild Fatpet" + (Math.floor(Math.random() * 100) + 1), hp: level * 10, level: level };
             displayEncounter();
         }
 
-        // Display encountered Fatpet mon
         function displayEncounter() {
             let encounterArea = document.getElementById("encounterArea");
             encounterArea.innerHTML = `
-                <div class="fatpet">
-                    <p>${player.encounter.name}</p>
-                    <p>Level: ${player.encounter.level}</p>
-                    <p>HP: ${player.encounter.hp}</p>
-                </div>
-                <p>
-                    <button class="btn" onclick="attemptCapture()">Attempt Capture</button>
-                    <button class="btn" onclick="startBattle()">Battle</button>
-                </p>
+                <div class="encounterFatpet">🦴</div>
+                <p>${player.encounter.name} (Level ${player.encounter.level})</p>
+                <button class="btn" onclick="attemptCapture()">Attempt Capture</button>
             `;
         }
 
-        // Capture attempt with success based on level difference
         function attemptCapture() {
-            let successRate = Math.random();
-            let captureThreshold = 0.5 + (player.activeFatpetMon ? 0.1 : 0); // Easier if the player has an active Fatpet mon
-            if (successRate < captureThreshold) {
+            if (Math.random() < 0.5) {
                 alert("Capture successful!");
                 player.fatpetMon.push(player.encounter);
                 updateInventory();
+                saveAccount();
             } else {
                 alert("Capture failed. Try again!");
             }
@@ -93,63 +162,17 @@
             document.getElementById("encounterArea").innerHTML = "";
         }
 
-        // Start a battle between player's active Fatpet mon and the wild Fatpet mon
-        function startBattle() {
-            if (!player.activeFatpetMon) {
-                alert("Please select an active Fatpet mon from your inventory first!");
-                return;
-            }
-            let playerAttack = player.activeFatpetMon.attack - player.encounter.defense;
-            let encounterAttack = player.encounter.attack - player.activeFatpetMon.defense;
-            player.encounter.hp -= playerAttack > 0 ? playerAttack : 1;
-            player.activeFatpetMon.hp -= encounterAttack > 0 ? encounterAttack : 1;
-
-            if (player.encounter.hp <= 0) {
-                alert("You won the battle!");
-                player.activeFatpetMon.xp = (player.activeFatpetMon.xp || 0) + 10;
-                checkLevelUp(player.activeFatpetMon);
-                updateInventory();
-            } else if (player.activeFatpetMon.hp <= 0) {
-                alert("Your Fatpet mon was defeated!");
-                player.activeFatpetMon.hp = 1; // Reset HP to avoid complete loss
-            } else {
-                alert("Battle ongoing! Attack again!");
-            }
-        }
-
-        // Check if the Fatpet mon levels up
-        function checkLevelUp(fatpet) {
-            let levelUpThreshold = fatpet.level * 20;
-            if (fatpet.xp >= levelUpThreshold) {
-                fatpet.level++;
-                fatpet.hp += 10;
-                fatpet.attack += 2;
-                fatpet.defense += 1.5;
-                fatpet.xp = 0;
-                alert(`${fatpet.name} leveled up! Now level ${fatpet.level}`);
-            }
-        }
-
         // Update inventory display
         function updateInventory() {
             let inventoryArea = document.getElementById("inventoryArea");
             inventoryArea.innerHTML = player.fatpetMon.map((fatpet, index) => `
-                <div class="fatpet" onclick="setActiveFatpet(${index})">
+                <div class="fatpet">
                     <p>${fatpet.name}</p>
                     <p>Level: ${fatpet.level}</p>
                     <p>HP: ${fatpet.hp}</p>
-                    <p>Attack: ${fatpet.attack}</p>
-                    <p>Defense: ${fatpet.defense}</p>
                 </div>
             `).join("");
-        }
-
-        // Set a Fatpet mon as active for battles
-        function setActiveFatpet(index) {
-            player.activeFatpetMon = player.fatpetMon[index];
-            alert(`${player.activeFatpetMon.name} is now active for battles!`);
         }
     </script>
 </body>
 </html>
-
