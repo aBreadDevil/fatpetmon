@@ -1,178 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fatpetmon Game</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f0f0f0;
-            color: #333;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-        }
-        #gameScreen {
-            width: 400px;
-            height: 400px;
-            border: 2px solid #333;
-            margin: 20px auto;
-            position: relative;
-            background-color: #b2d8d8;
-        }
-        .player, .encounterFatpet {
-            width: 40px;
-            height: 40px;
-            position: absolute;
-            text-align: center;
-            line-height: 40px;
-            background-color: lightblue;
-            border: 2px solid #333;
-        }
-        #player {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .btn {
-            padding: 10px 20px;
-            margin: 5px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        #inventoryArea {
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <h1>Fatpetmon Game</h1>
+<div id="box" style="border: 2px solid black; width: 200px; height: 200px">
+    <div id="sprite" style="left: 0; bottom: 0"></div>
+</div>
+<button>Increase Speed</button>
 
-    <div class="container">
-        <div>
-            <button class="btn" onclick="login()">Login</button>
-            <button class="btn" onclick="register()">Register</button>
-            <button class="btn" onclick="logout()">Logout</button>
-        </div>
-        <div id="gameScreen">
-            <div id="player" class="player">👤</div>
-        </div>
-        <button class="btn" onclick="generateEncounter()">Walk Around</button>
-        <div id="encounterArea"></div>
-        <h2>Your Fatpet Inventory</h2>
-        <div id="inventoryArea"></div>
-    </div>
+<style>
+    #sprite {
+        width: 25px;
+        height: 25px;
+        background: red;
+        position: relative;
+    }
+</style>
 
-    <script>
-        let accounts = JSON.parse(localStorage.getItem("accounts") || "{}");
-        let currentUser = null;
-        let player = { fatpetMon: [], activeFatpetMon: null, encounter: null };
-        
-        function saveAccount() {
-            if (currentUser) {
-                accounts[currentUser] = player;
-                localStorage.setItem("accounts", JSON.stringify(accounts));
-            }
-        }
+<script>
+    const box = document.querySelector('#box');
+    const sprite = document.querySelector('#sprite');
+    const button = document.querySelector('button');
+    let speed = 2;
+    let movement = { a: false, d: false, w: false, s: false };
 
-        function login() {
-            const username = prompt("Enter your username:");
-            if (accounts[username]) {
-                currentUser = username;
-                player = accounts[username];
-                alert("Login successful!");
-                updateInventory();
-            } else {
-                alert("No account found. Please register first.");
-            }
-        }
+    const toNum = (pxVal) => parseInt(pxVal, 10);
 
-        function register() {
-            const username = prompt("Choose a username:");
-            if (!accounts[username]) {
-                currentUser = username;
-                accounts[username] = { fatpetMon: [], activeFatpetMon: null };
-                localStorage.setItem("accounts", JSON.stringify(accounts));
-                alert("Account registered!");
-            } else {
-                alert("Username already exists.");
-            }
-        }
+    const moveSprite = () => {
+        let left = toNum(sprite.style.left);
+        let bottom = toNum(sprite.style.bottom);
 
-        function logout() {
-            saveAccount();
-            currentUser = null;
-            player = { fatpetMon: [], activeFatpetMon: null };
-            alert("Logged out!");
-            updateInventory();
-        }
+        if (movement.a && left > 0) sprite.style.left = left - speed + 'px';
+        if (movement.d && left < 175) sprite.style.left = left + speed + 'px';
+        if (movement.w && bottom < 175) sprite.style.bottom = bottom + speed + 'px';
+        if (movement.s && bottom > -175) sprite.style.bottom = bottom - speed + 'px';
 
-        // Player movement and encounter area setup
-        const gameScreen = document.getElementById("gameScreen");
-        const playerElement = document.getElementById("player");
-        let posX = 180, posY = 180;
-        
-        function movePlayer(dx, dy) {
-            posX = Math.min(360, Math.max(0, posX + dx));
-            posY = Math.min(360, Math.max(0, posY + dy));
-            playerElement.style.left = posX + "px";
-            playerElement.style.top = posY + "px";
-            if (Math.random() < 0.2) { generateEncounter(); } // 20% chance to encounter
-        }
+        requestAnimationFrame(moveSprite);
+    };
 
-        document.addEventListener("keydown", function(event) {
-            if (!currentUser) return alert("Please log in or register.");
-            if (event.key === "ArrowUp") movePlayer(0, -40);
-            if (event.key === "ArrowDown") movePlayer(0, 40);
-            if (event.key === "ArrowLeft") movePlayer(-40, 0);
-            if (event.key === "ArrowRight") movePlayer(40, 0);
-        });
+    window.addEventListener('keydown', (e) => {
+        if (movement.hasOwnProperty(e.key)) movement[e.key] = true;
+    });
 
-        // Generate and display random encounter
-        function generateEncounter() {
-            let level = Math.floor(Math.random() * 10) + 1;
-            player.encounter = { name: "Wild Fatpet" + (Math.floor(Math.random() * 100) + 1), hp: level * 10, level: level };
-            displayEncounter();
-        }
+    window.addEventListener('keyup', (e) => {
+        if (movement.hasOwnProperty(e.key)) movement[e.key] = false;
+    });
 
-        function displayEncounter() {
-            let encounterArea = document.getElementById("encounterArea");
-            encounterArea.innerHTML = `
-                <div class="encounterFatpet">🦴</div>
-                <p>${player.encounter.name} (Level ${player.encounter.level})</p>
-                <button class="btn" onclick="attemptCapture()">Attempt Capture</button>
-            `;
-        }
+    button.addEventListener('click', () => (speed += 1));
 
-        function attemptCapture() {
-            if (Math.random() < 0.5) {
-                alert("Capture successful!");
-                player.fatpetMon.push(player.encounter);
-                updateInventory();
-                saveAccount();
-            } else {
-                alert("Capture failed. Try again!");
-            }
-            player.encounter = null;
-            document.getElementById("encounterArea").innerHTML = "";
-        }
-
-        // Update inventory display
-        function updateInventory() {
-            let inventoryArea = document.getElementById("inventoryArea");
-            inventoryArea.innerHTML = player.fatpetMon.map((fatpet, index) => `
-                <div class="fatpet">
-                    <p>${fatpet.name}</p>
-                    <p>Level: ${fatpet.level}</p>
-                    <p>HP: ${fatpet.hp}</p>
-                </div>
-            `).join("");
-        }
-    </script>
-</body>
-</html>
+    requestAnimationFrame(moveSprite);
+</script>
